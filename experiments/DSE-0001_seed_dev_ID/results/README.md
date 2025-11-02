@@ -1,0 +1,1 @@
+This folder will contain id_curve.csv and plots after running the script.

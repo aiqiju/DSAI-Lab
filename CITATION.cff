@@ -1,0 +1,18 @@
+cff-version: 1.2.0
+message: "If you use this work, please cite it as below."
+title: "Dimensional Exponential Evolution (DEE): A DS×AI Practice Repository"
+authors:
+  - family-names: "Arron"
+    given-names: "JAMES"
+  - family-names: "GPT-5 Thinking"
+    given-names: "Collaborative AI"
+date-released: "2025-11-02 04:05 JST"
+version: "0.9.0"
+doi: "TODO: replace with Zenodo DOI after first release"
+license: "MIT-0 or MIT"
+repository-code: "https://github.com/yourname/DSAI-Lab"
+keywords:
+  - DS×AI
+  - Dimensional Evolution
+  - Intrinsic Dimension
+  - Open Science
