@@ -30,6 +30,55 @@ def estimate_id_per_time(df, timecol, var_ratio=0.95):
         times.append(t)
         ids.append(k)
     return pd.DataFrame({"time": times, "D_pca": ids}).sort_values("time")
+
+# --- TwoNN intrinsic dimension estimator (Facco et al., 2017, minimal naive impl) ---
+def _twonn_id(X):
+    """
+    X: (n_samples, n_features)
+    returns: scalar ID estimate or None
+    """
+    n = X.shape[0]
+    if n < 10:  # need enough points to be meaningful
+        return None
+    # compute pairwise distances (naive O(n^2))
+    # use Euclidean; center for stability
+    Xc = X - X.mean(axis=0, keepdims=True)
+    d2 = np.sum((Xc[:, None, :] - Xc[None, :, :])**2, axis=2)
+    d = np.sqrt(np.maximum(d2, 0.0))
+    # for each point, find 1st and 2nd nearest neighbors (excluding self=0)
+    r1 = np.empty(n)
+    r2 = np.empty(n)
+    for i in range(n):
+        di = np.sort(d[i][d[i] > 0])  # exclude self
+        if len(di) < 2:
+            return None
+        r1[i], r2[i] = di[0], di[1]
+    mu = r2 / r1
+    # discard pathological values
+    mu = mu[np.isfinite(mu) & (mu > 1)]
+    if len(mu) < 10:
+        return None
+    # ID estimate: m = -1 / <log(mu - 1?) or log(mu)?>
+    # For TwoNN, use E[log(mu)] = 1/m  => m = 1 / mean(log(mu))
+    val = np.mean(np.log(mu))
+    if val <= 0:
+        return None
+    return float(1.0 / val)
+
+def estimate_id_per_time_twonn(df, timecol):
+    times, ids = [], []
+    for t, sub in df.groupby(timecol):
+        X = sub.drop(columns=[timecol]).select_dtypes(include=["number"]).values
+        if X.shape[0] < 10:
+            continue
+        m = _twonn_id(X)
+        if m is not None and np.isfinite(m):
+            times.append(t)
+            # cap to feature count (optional)
+            ids.append(min(m, X.shape[1]))
+    return pd.DataFrame({"time": times, "D_twonn": ids}).sort_values("time")
+
+
 # --- simple changepoint detection: two-piece linear fit vs single line ---
 import math, json
 
@@ -99,6 +148,13 @@ def main():
     out_csv = os.path.join(args.out, "id_curve.csv")
     curve.to_csv(out_csv, index=False)
 
+
+    # TwoNN-based curve
+    curve2 = estimate_id_per_time_twonn(df, args.timecol)
+    out_csv2 = os.path.join(args.out, "id_curve_twonn.csv")
+    curve2.to_csv(out_csv2, index=False)
+
+
     # changepoint detection on (time, D_pca)
     cp = detect_changepoint(curve["time"].tolist(), curve["D_pca"].tolist())
     with open(os.path.join(args.out, "changepoint.json"), "w") as f:
@@ -110,10 +166,15 @@ def main():
         import matplotlib.pyplot as plt
 
         plt.figure()
-        plt.plot(curve["time"], curve["D_pca"], marker="o")
+        plt.plot(curve["time"], curve["D_pca"], marker="o", label="PCA(95%)")
+        try:
+            if not curve2.empty:
+                plt.plot(curve2["time"], curve2["D_twonn"], marker="s", linestyle="--", label="TwoNN")
+        except Exception:
+            pass
         plt.xlabel("time")
-        plt.ylabel("intrinsic dimension (PCA 95%)")
-        title = "D(t) — PCA-based estimate"
+        plt.ylabel("intrinsic dimension")
+        title = "D(t) — PCA vs TwoNN"
         try:
             if cp.get("best_t") is not None:
                 bt = cp["best_t"]
@@ -122,6 +183,7 @@ def main():
         except Exception:
             pass
         plt.title(title)
+        plt.legend()
         plt.tight_layout()
         plt.savefig(os.path.join(args.out, "id_curve.png"), dpi=150)
 
