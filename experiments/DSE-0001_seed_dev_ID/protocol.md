@@ -27,3 +27,12 @@
 
 ## Next Step
 - If inconclusive: increase samples, try another ID estimator, control confounders.
+
+## Conclusion (v2)
+- 拐点检测：best_t≈4，ΔBIC=7.26 → “两段线优于单线”，呈先升后稳。
+
+## Next Step
+- 引入第二个 ID 估计器（TwoNN/Morisita）交叉验证
+- 做 PCA 阈值 90%/99% 的敏感性分析
+
+
