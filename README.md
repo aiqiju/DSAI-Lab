@@ -1,3 +1,5 @@
+[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.17506172.svg)](https://doi.org/10.5281/zenodo.17506172)
+
 # DSAI-Lab — Dimensional Self-Growth System (DSGS)
 
 > **里程碑**：进入“科学建构模式”。时间：2025-11-02 04:05 JST
