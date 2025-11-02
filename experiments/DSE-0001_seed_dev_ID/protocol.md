@@ -25,14 +25,15 @@
 ## Conclusion (to be filled after run)
 - Support / Not support / Inconclusive (reasons)
 
-## Next Step
-- If inconclusive: increase samples, try another ID estimator, control confounders.
-
 ## Conclusion (v2)
-- 拐点检测：best_t≈4，ΔBIC=7.26 → “两段线优于单线”，呈先升后稳。
+- 拐点检测：best_t≈4，ΔBIC=7.26 → 先升后稳，“两段线优于单线”
+- 交叉验证（TwoNN）：整体同向（见 `id_curve_twonn.csv` / `id_curve.png`）
 
 ## Next Step
-- 引入第二个 ID 估计器（TwoNN/Morisita）交叉验证
-- 做 PCA 阈值 90%/99% 的敏感性分析
+- PCA 方差阈值敏感性：90% / 95% / 99% 比较曲线是否同向
+- （可选）加入 Morisita 维 或 滑动窗口稳健性检查
+- 冻结 **DSE-0001 v0.1**：打 release，Zenodo 取 DOI
+- 在 Issue 与 protocol 中同步记录结果与结论
+
 
 
