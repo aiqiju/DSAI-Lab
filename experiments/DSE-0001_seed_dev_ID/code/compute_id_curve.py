@@ -19,17 +19,40 @@ def pca_rank(X, var_ratio=0.95):
     k = int(np.searchsorted(cum, var_ratio) + 1)
     return max(1, min(k, X.shape[1]))
 
+
 def estimate_id_per_time(df, timecol, var_ratio=0.95):
-    times = []
-    ids = []
+    """
+    按 time 分组，用 SVD-PCA 估计“解释到 var_ratio 的主成分个数”作为 D_pca。
+    仅使用数值特征列；每组样本少于3条则跳过。
+    """
+    times, ids = [], []
+
+    # 仅保留数值特征列（去掉time本身）
+    feat_cols = [
+        c for c in df.columns
+        if c != timecol and pd.api.types.is_numeric_dtype(df[c])
+    ]
+
     for t, sub in df.groupby(timecol):
-        X = sub.drop(columns=[timecol]).values
-        if len(sub) < 3:
+        if len(sub) < 3 or len(feat_cols) == 0:
             continue
+        X = sub[feat_cols].to_numpy()
+
+        # 防御：如果全 NaN 或者列数为0，跳过
+        if X.size == 0 or np.all(~np.isfinite(X)):
+            continue
+
         k = pca_rank(X, var_ratio=var_ratio)
+        # 夹在 [1, 特征数] 范围内
+        k = int(max(1, min(k, X.shape[1])))
+
         times.append(t)
         ids.append(k)
+
     return pd.DataFrame({"time": times, "D_pca": ids}).sort_values("time")
+
+
+
 
 # --- TwoNN intrinsic dimension estimator (Facco et al., 2017, minimal naive impl) ---
 def _twonn_id(X):
@@ -136,6 +159,13 @@ def main():
     ap.add_argument("--csv", required=True)
     ap.add_argument("--timecol", default="time")
     ap.add_argument("--out", default="results")
+
+    ap.add_argument(
+        "--var_ratio", type=float, default=0.95,
+        help="PCA累计方差阈值(0~1)，如 0.90 / 0.95 / 0.99"
+    )
+
+
     args = ap.parse_args()
 
     os.makedirs(args.out, exist_ok=True)
@@ -144,7 +174,8 @@ def main():
         print(f"ERROR: time column '{args.timecol}' not in CSV.", file=sys.stderr)
         sys.exit(1)
 
-    curve = estimate_id_per_time(df, args.timecol)
+    curve = estimate_id_per_time(df, args.timecol, var_ratio=args.var_ratio)
+
     out_csv = os.path.join(args.out, "id_curve.csv")
     curve.to_csv(out_csv, index=False)
 
